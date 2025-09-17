@@ -1,10 +1,65 @@
-#include "SysInfo.h"
-#include <Windows.h>
 #include <VersionHelpers.h>
+#include <Windows.h>
+#include <cstdlib>
+#include <exception>
+#include <iomanip>
+#include <iostream>
+#include <psapi.h>
 #include <stdexcept>
 #include <vector>
 
-std::string SysInfo::GetOSVersion()
+#pragma comment(lib, "psapi.lib")
+
+namespace Constants
+{
+constexpr size_t MEGABYTE = 1024 * 1024;
+constexpr size_t GIGABYTE = 1024 * 1024 * 1024;
+} // namespace Constants
+
+inline static MEMORYSTATUSEX GetMemoryInfo()
+{
+	MEMORYSTATUSEX statex;
+	statex.dwLength = sizeof(statex);
+
+	if (!GlobalMemoryStatusEx(&statex))
+	{
+		throw std::runtime_error("Failed to get memory status");
+	}
+
+	return statex;
+}
+
+inline static uint64_t GetTotalMemory(const MEMORYSTATUSEX& memInfo)
+{
+	return memInfo.ullTotalPhys / Constants::MEGABYTE;
+}
+
+inline static uint64_t GetFreeMemory(const MEMORYSTATUSEX& memInfo)
+{
+	return memInfo.ullAvailPhys / Constants::MEGABYTE;
+}
+
+inline static uint64_t GetVirtualMemory(const MEMORYSTATUSEX& memInfo)
+{
+	return memInfo.ullAvailPageFile / Constants::MEGABYTE;
+}
+
+inline static DWORD GetMemoryLoad(const MEMORYSTATUSEX& memInfo)
+{
+	return memInfo.dwMemoryLoad;
+}
+
+inline static uint64_t GetPagefileTotal(const MEMORYSTATUSEX& memInfo)
+{
+	return memInfo.ullTotalPageFile / Constants::MEGABYTE;
+}
+
+inline static uint64_t GetPagefileFree(const MEMORYSTATUSEX& memInfo)
+{
+	return memInfo.ullAvailPageFile / Constants::MEGABYTE;
+}
+
+inline static std::string GetOperationSystemName()
 {
 	if (IsWindows10OrGreater())
 	{
@@ -69,10 +124,25 @@ std::string SysInfo::GetOSVersion()
 	return "Windows older than XP";
 }
 
-std::string SysInfo::GetOSUsername()
+inline static std::string GetPCName()
+{
+	DWORD bufferSize = MAX_COMPUTERNAME_LENGTH + 1;
+	std::vector<wchar_t> nameBuffer(bufferSize);
+
+	if (GetComputerNameW(nameBuffer.data(), &bufferSize))
+	{
+		std::wstring name(nameBuffer.data(), bufferSize);
+		return std::string(name.begin(), name.end());
+	}
+
+	return "";
+}
+
+inline static std::string GetUsername()
 {
 	wchar_t buffer[256 + 1];
 	DWORD size = std::size(buffer);
+
 	if (GetUserNameW(buffer, &size))
 	{
 		std::wstring wstr(buffer);
@@ -82,34 +152,97 @@ std::string SysInfo::GetOSUsername()
 	return "Unknown";
 }
 
-uint64_t SysInfo::GetTotalMemory()
+inline static std::string GetArchitecture()
 {
-	MEMORYSTATUSEX memInfo;
-	memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-	if (GlobalMemoryStatusEx(&memInfo))
-	{
-		return memInfo.ullTotalPhys;
-	}
+	SYSTEM_INFO sysInfo;
+	GetNativeSystemInfo(&sysInfo);
 
-	return 0;
+	switch (sysInfo.wProcessorArchitecture)
+	{
+	case PROCESSOR_ARCHITECTURE_AMD64:
+		return "x64 (AMD64)";
+	case PROCESSOR_ARCHITECTURE_INTEL:
+		return "x86 (Intel)";
+	case PROCESSOR_ARCHITECTURE_ARM:
+		return "ARM";
+	case PROCESSOR_ARCHITECTURE_ARM64:
+		return "ARM64";
+	default:
+		return "Unknown";
+	}
 }
 
-uint64_t SysInfo::GetFreeMemory()
-{
-	MEMORYSTATUSEX memInfo;
-	memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-	if (GlobalMemoryStatusEx(&memInfo))
-	{
-		return memInfo.ullAvailPhys;
-	}
-
-	return 0;
-}
-
-unsigned SysInfo::GetProcessorCount()
+inline static unsigned GetProcessorCount()
 {
 	SYSTEM_INFO sysInfo;
 	GetSystemInfo(&sysInfo);
 
 	return sysInfo.dwNumberOfProcessors;
+}
+
+inline static void PrintLogicalDrives()
+{
+	DWORD bufferLength = GetLogicalDriveStringsW(0, nullptr);
+	if (bufferLength == 0)
+	{
+		return;
+	}
+
+	std::vector<wchar_t> driveStrings(bufferLength);
+	if (GetLogicalDriveStringsW(bufferLength, driveStrings.data()) == 0)
+	{
+		return;
+	}
+
+	wchar_t* currentDrive = driveStrings.data();
+	while (*currentDrive)
+	{
+		ULARGE_INTEGER freeBytesAvailable;
+		ULARGE_INTEGER totalNumberOfBytes;
+		wchar_t fsNameBuffer[MAX_PATH] = {0};
+
+		if (GetDiskFreeSpaceExW(currentDrive, &freeBytesAvailable, &totalNumberOfBytes, nullptr) &&
+			GetVolumeInformationW(currentDrive, nullptr, 0, nullptr, nullptr, nullptr, fsNameBuffer, MAX_PATH))
+		{
+			uint64_t freeGB = freeBytesAvailable.QuadPart / Constants::GIGABYTE;
+			uint64_t totalGB = totalNumberOfBytes.QuadPart / Constants::GIGABYTE;
+
+			std::wcout << L"  - " << currentDrive << L" (" << fsNameBuffer << L"): "
+					   << freeGB << L" GB free / " << totalGB << L" GB total" << std::endl;
+		}
+		else
+		{
+			std::wcout << L"  - " << currentDrive << L" (No media or inaccessible)" << std::endl;
+		}
+
+		currentDrive += wcslen(currentDrive) + 1;
+	}
+}
+
+int main()
+{
+	try
+	{
+		const auto memoryInfo = GetMemoryInfo();
+
+		std::cout << "OS: " << GetOperationSystemName() << std::endl;
+		std::cout << "Computer Name: " << GetPCName() << std::endl;
+		std::cout << "User: " << GetUsername() << std::endl;
+		std::cout << "Architecture: " << GetArchitecture() << std::endl;
+		std::cout << "RAM: " << GetFreeMemory(memoryInfo) << " MB / " << GetTotalMemory(memoryInfo) << " MB" << std::endl;
+		std::cout << "Virtual memory: " << GetVirtualMemory(memoryInfo) << " MB" << std::endl;
+		std::cout << "Memory load: " << GetMemoryLoad(memoryInfo) << " %" << std::endl;
+		std::cout << "Pagefile: " << GetPagefileFree(memoryInfo) << " MB / " << GetPagefileTotal(memoryInfo) << " MB" << std::endl;
+		std::cout << "Processors: " << GetProcessorCount() << std::endl;
+		std::cout << "Drivers: " << std::endl;
+
+		PrintLogicalDrives();
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << "Error: " << e.what() << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
 }

@@ -1,7 +1,8 @@
 #include <stdlib.h>
+#include <string>
+#include <Windows.h>
 
-/*
-std::string SysInfo::GetOSName()
+std::string GetOSName()
 {
 	DWORD bufferSize = MAX_COMPUTERNAME_LENGTH + 1;
 	std::vector<wchar_t> nameBuffer(bufferSize);
@@ -14,10 +15,9 @@ std::string SysInfo::GetOSName()
 
 	return "";
 }
-*/
 
-/*
-std::string SysInfo::GetArchitecture()
+
+std::string GetArchitecture()
 {
 	SYSTEM_INFO sysInfo;
 	GetNativeSystemInfo(&sysInfo);
@@ -35,7 +35,7 @@ std::string SysInfo::GetArchitecture()
 		return "Unknown";
 	}
 }
-*/
+
 int main()
 {
 
