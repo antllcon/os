@@ -28,7 +28,7 @@ rm out/proj.tar.gz
 
 cd out/
 mkdir -p include src build
-mv -f *.h include/
+mv *.h include/
 mv *.cpp src/
 
 g++ -I./include -Wall -Wextra -std=c++17 -O2 src/*.cpp -o build/start

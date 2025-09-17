@@ -18,6 +18,7 @@ constexpr std::string MEM_FREE_KEY = "MemFree:";
 constexpr std::string SWAP_TOTAL_KEY = "SwapTotal:";
 constexpr std::string SWAP_FREE_KEY = "SwapFree:";
 constexpr std::string VIRTUAL_MEMORY_KEY = "VmallocTotal:";
+constexpr int NUM_PARAMETRS = 3;
 constexpr int KILOBYTE = 1024;
 constexpr long NEGATIVE_RAM = -1;
 
@@ -131,9 +132,9 @@ MemoryStats GetMemoryStats(const std::string& totalKey, const std::string& freeK
 	return memoryStats;
 }
 
-long GetCountProcessors()
+int GetProcessorCount()
 {
-	const long countProccesors = get_nprocs();
+	const int countProccesors = get_nprocs();
 	if (countProccesors < 0)
 	{
 		throw std::runtime_error("Failed to get number of processors");
@@ -143,8 +144,8 @@ long GetCountProcessors()
 
 void PrintLoadAverage()
 {
-	double loadAverage[3];
-	if (getloadavg(loadAverage, 3) != 3)
+	double loadAverage[NUM_PARAMETRS];
+	if (getloadavg(loadAverage, NUM_PARAMETRS) != NUM_PARAMETRS)
 	{
 		throw std::runtime_error("Failed to get load average");
 	}
@@ -185,9 +186,9 @@ void PrintDrivesInfo()
 	std::cout << "Drives:" << std::endl;
 	for (const auto& drive : drives)
 	{
-		std::cout << "  " << std::left << std::setw(12) << drive.mountPoint
-				  << std::setw(10) << drive.fsType
-				  << std::setw(10) << drive.freeBytes << " free / "
+		std::cout << "  " << std::left << std::setw(20) << drive.mountPoint
+				  << std::setw(20) << drive.fsType
+				  << std::setw(20) << drive.freeBytes << " free / "
 				  << drive.totalBytes << " total" << std::endl;
 	}
 }
@@ -208,7 +209,7 @@ int main()
 		const MemoryStats swap = GetMemoryStats(SWAP_TOTAL_KEY, SWAP_FREE_KEY);
 		std::cout << "Swap: " << swap.free << "MB free / " << swap.total << "MB total" << std::endl;
 
-		std::cout << "Processors: " << GetCountProcessors() << std::endl;
+		std::cout << "Processors: " << GetProcessorCount() << std::endl;
 		PrintLoadAverage();
 		PrintDrivesInfo();
 	}
