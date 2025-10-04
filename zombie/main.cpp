@@ -5,8 +5,6 @@
 
 int main()
 {
-
-	// Выяснить, что будет, если ждать другой процесс
 	std::cout << "Parent process: " << getpid() << std::endl;
 
 	std::cout << std::flush;
@@ -20,13 +18,13 @@ int main()
 
 	if (pid == 0)
 	{
-		// std::cout << "Child process: " << getpid() << std::endl;
+		std::cout << "Child process: " << getpid() << std::endl;
 		_exit(127);
 	}
-	else
+	if (pid > 0)
 	{
 		std::cout << "Parent process: " << getpid() << std::endl;
-		std::cout << "Child process - PID: " << pid << std::endl;
+		// std::cout << "Child process - PID: " << pid << std::endl;
 
 		int status;
 		pid_t userPid;
@@ -36,7 +34,7 @@ int main()
 			std::cout << "Write kid PID: ";
 			std::cin >> userPid;
 
-			pid_t result = waitpid(userPid, &status, WNOHANG);
+			const pid_t result = waitpid(userPid, &status, WNOHANG);
 
 			if (result == -1)
 			{
