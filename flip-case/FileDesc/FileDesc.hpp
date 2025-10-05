@@ -15,7 +15,7 @@ public:
 	FileDesc& operator=(const FileDesc&) = delete;
 
 	FileDesc(FileDesc&& other) noexcept;
-	FileDesc& operator=(FileDesc&& rhs) noexcept;
+	FileDesc& operator=(FileDesc&& rhs);
 	~FileDesc();
 
 	void Swap(FileDesc& other);

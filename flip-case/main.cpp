@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <iostream>
 #include <span>
-#include <sys/stat.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
@@ -88,7 +87,7 @@ int ProcessFile(const std::string& inputFile)
 		std::cerr << "Error: " << e.what() << std::endl;
 	}
 
-	std::cout << "Process " << pid << " has finished successfully." << std::endl;
+	std::cout << "Process " << pid << " has finished successfully" << std::endl;
 	return EXIT_SUCCESS;
 }
 
@@ -167,6 +166,7 @@ int main(const int argc, char* argv[])
 	}
 
 	const auto maxParallel = std::thread::hardware_concurrency();
+	std::cout << maxParallel << std::endl;
 
 	std::vector<pid_t> childProcesses;
 	for (const auto& file : inputFiles)

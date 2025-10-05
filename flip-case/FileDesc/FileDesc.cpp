@@ -19,7 +19,7 @@ FileDesc::FileDesc(FileDesc&& other) noexcept
 {
 }
 
-FileDesc& FileDesc::operator=(FileDesc&& rhs) noexcept
+FileDesc& FileDesc::operator=(FileDesc&& rhs)
 {
 	if (this != &rhs)
 	{
