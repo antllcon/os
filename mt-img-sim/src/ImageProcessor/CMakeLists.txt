@@ -1,0 +1,2 @@
+add_library(ImageProcessor ImageProcessor.cpp)
+target_include_directories(ImageProcessor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
