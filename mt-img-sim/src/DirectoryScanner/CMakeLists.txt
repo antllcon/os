@@ -1,0 +1,2 @@
+add_library(DirectoryScanner DirectoryScanner.cpp)
+target_include_directories(DirectoryScanner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

@@ -30,7 +30,7 @@ ArgParser::ArgParser(int argc, char* argv[])
 
 void ArgParser::Parse()
 {
-	m_queryImagePath = m_args[0];
+	m_targetImagePath = m_args[0];
 	m_inputDir = m_args[1];
 
 	for (size_t i = 2; i < m_args.size(); ++i)
@@ -57,9 +57,9 @@ void ArgParser::Parse()
 	}
 }
 
-const std::string& ArgParser::GetQueryImagePath() const
+const std::string& ArgParser::GetTargetImagePath() const
 {
-	return m_queryImagePath;
+	return m_targetImagePath;
 }
 
 const std::string& ArgParser::GetInputDir() const

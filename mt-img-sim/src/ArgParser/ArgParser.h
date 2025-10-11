@@ -13,7 +13,7 @@ public:
 	ArgParser(int argc, char* argv[]);
 	void Parse();
 
-	const std::string& GetQueryImagePath() const;
+	const std::string& GetTargetImagePath() const;
 	const std::string& GetInputDir() const;
 	size_t GetNumThreads() const;
 	size_t GetTopK() const;
@@ -23,7 +23,7 @@ private:
 	const std::string& GetValueFor(const std::string& argName, size_t& index);
 
 	std::vector<std::string> m_args;
-	std::string m_queryImagePath;
+	std::string m_targetImagePath;
 	std::string m_inputDir;
 	size_t m_numThreads = MIN_THREADS;
 	size_t m_topK = MIN_SIM_IMAGES;

@@ -1,11 +1,20 @@
-add_executable(MtImgSim main.cpp)
+find_package(Boost REQUIRED COMPONENTS thread system)
 
-add_subdirectory(src/ImageProcessor)
-add_subdirectory(src/ArgParser)
-
-target_link_libraries(MtImgSim PRIVATE
-        ImageProcessor
+set(MODULES
         ArgParser
+        DirectoryScanner
+        ImageProcessor
+        ResultFilter
 )
 
-target_include_directories(MtImgSim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable(MtImgSim main.cpp)
+
+foreach (MODULE ${MODULES})
+    add_subdirectory(src/${MODULE})
+endforeach ()
+
+target_link_libraries(MtImgSim PRIVATE
+        ${MODULES}
+        Boost::thread
+        Boost::system
+)

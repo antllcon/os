@@ -1,0 +1,3 @@
+add_library(ResultFilter ResultFilter.cpp)
+target_include_directories(ResultFilter PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(ResultFilter PUBLIC ArgParser ImageProcessor)
