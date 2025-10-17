@@ -1,14 +1,16 @@
 #ifndef PROCESSSCANNER_HPP
 #define PROCESSSCANNER_HPP
 
+#if WIN32
 #include "ScopedHandle.hpp"
-#include <algorithm>
-#include <iostream>
 #include <psapi.h>
-#include <string>
 #include <tlhelp32.h>
-#include <vector>
 #include <windows.h>
+#endif
+
+#include <cstdint>
+#include <string>
+#include <vector>
 
 struct ProcessInfo
 {
@@ -25,15 +27,8 @@ struct ProcessInfo
 class ProcessScanner
 {
 public:
-	std::vector<ProcessInfo> GetProcesses();
+	static std::vector<ProcessInfo> GetProcesses();
 	static void SortByMemory(std::vector<ProcessInfo>& processes);
-
-private:
-	std::vector<ProcessInfo> ScanProcesses();
-	std::string GetUserName(uint32_t pid);
-	bool GetMemoryInfo(uint32_t pid, uint64_t& privateBytes, uint64_t& sharedMemory);
-	bool GetCpuUsage(uint32_t pid, double& usage);
-	std::string GetCommandLine(uint32_t pid);
 };
 
 #endif // PROCESSSCANNER_HPP

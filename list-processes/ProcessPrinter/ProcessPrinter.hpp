@@ -2,7 +2,6 @@
 #define PROCESSPRINTER_HPP
 
 #include "ProcessScanner.hpp"
-#include <string>
 #include <vector>
 
 namespace ProcessPrinter

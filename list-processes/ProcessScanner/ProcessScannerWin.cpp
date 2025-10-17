@@ -28,7 +28,7 @@ std::vector<ProcessInfo> ProcessScanner::GetProcesses()
 	return ScanProcesses();
 }
 
-void ProcessScanner::SortByMemory(std::vector<ProcessInfo>& processes)
+void SortByMemory(std::vector<ProcessInfo>& processes)
 {
 	std::sort(processes.begin(), processes.end(), [](const ProcessInfo& a, const ProcessInfo& b) {
 		SIZE_T aTotal = a.privateBytes + a.sharedMemory;
@@ -37,7 +37,7 @@ void ProcessScanner::SortByMemory(std::vector<ProcessInfo>& processes)
 	});
 }
 
-std::vector<ProcessInfo> ProcessScanner::ScanProcesses()
+std::vector<ProcessInfo> ScanProcesses()
 {
 	std::vector<ProcessInfo> processes;
 
@@ -66,7 +66,7 @@ std::vector<ProcessInfo> ProcessScanner::ScanProcesses()
 	return processes;
 }
 
-std::string ProcessScanner::GetUserName(uint32_t pid)
+std::string GetUserName(uint32_t pid)
 {
 	ScopedHandle processHandle(OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid));
 	if (!processHandle)
@@ -110,7 +110,7 @@ std::string ProcessScanner::GetUserName(uint32_t pid)
 	return userName;
 }
 
-bool ProcessScanner::GetMemoryInfo(uint32_t pid, uint64_t& privateBytes, uint64_t& sharedMemory)
+bool GetMemoryInfo(uint32_t pid, uint64_t& privateBytes, uint64_t& sharedMemory)
 {
 	ScopedHandle processHandle(OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid));
 	if (!processHandle)
@@ -139,13 +139,13 @@ bool ProcessScanner::GetMemoryInfo(uint32_t pid, uint64_t& privateBytes, uint64_
 	return false;
 }
 
-bool ProcessScanner::GetCpuUsage(uint32_t pid, double& usage)
+bool GetCpuUsage(uint32_t pid, double& usage)
 {
 	// TODO: доделать
 	return false;
 }
 
-std::string ProcessScanner::GetCommandLine(uint32_t pid)
+std::string GetCommandLine(uint32_t pid)
 {
 	ScopedHandle processHandle(OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid));
 	if (!processHandle)

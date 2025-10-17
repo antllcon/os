@@ -17,7 +17,7 @@ constexpr size_t NAME_MAX_LENGTH = 24;
 constexpr size_t USER_MAX_LENGTH = 19;
 constexpr size_t CMD_MAX_LENGTH = 25;
 
-std::string FormatMemorySize(SIZE_T bytes)
+std::string FormatMemorySize(size_t bytes)
 {
 	std::string result = std::to_string(static_cast<double>(bytes) / MEGABYTE);
 	return result.substr(0, result.find('.') + 2) + " MB";
@@ -71,8 +71,8 @@ void PrintTable(const std::vector<ProcessInfo>& processes)
 
 void PrintSummary(const std::vector<ProcessInfo>& processes)
 {
-	SIZE_T totalPrivate = 0;
-	SIZE_T totalShared = 0;
+	size_t totalPrivate = 0;
+	size_t totalShared = 0;
 
 	for (const auto& process : processes)
 	{

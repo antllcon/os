@@ -2,11 +2,9 @@
 #include <ios>
 #include <iostream>
 #include <vector>
-#include <windows.h>
 
 #include "ProcessPrinter.hpp"
 #include "ProcessScanner.hpp"
-#include "ScopedHandle.hpp"
 
 int main()
 {
