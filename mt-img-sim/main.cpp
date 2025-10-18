@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 		auto candidateFiles = DirectoryScanner::Scan(parser.GetInputDir(), IMG_EXTENSIONS);
 		std::cout << "Просканирована директория - " << parser.GetInputDir() << std::endl;
 
-		// // auto listsBlocks = SplitIntoBlocks(candidateFiles, parser.GetNumThreads());
+		// auto listsBlocks = SplitIntoBlocks(candidateFiles, parser.GetNumThreads());
 		// for (const auto& block : listsBlocks)
 		// {
 		// 	for (const auto& filePath : block)
@@ -107,12 +107,12 @@ int main(int argc, char* argv[])
 		// 		std::make_move_iterator(result.begin()),
 		// 		std::make_move_iterator(result.end()));
 		// }
-
-		std::vector<std::future<std::vector<Result>>> futures;
+		//
+		// std::vector<std::future<std::vector<Result>>> futures;
 
 		boost::asio::thread_pool pool(parser.GetNumThreads());
-		std::vector<Result> allResults;
 		std::mutex resultsMutex;
+		std::vector<Result> allResults;
 		allResults.reserve(candidateFiles.size());
 
 		for (const auto& filePath : candidateFiles)
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
 
 					{
 						std::lock_guard lock(resultsMutex);
-						allResults.push_back({filePath, mse});
+						allResults.emplace_back(filePath, mse);
 					}
 				}
 				catch (const std::exception& e)
