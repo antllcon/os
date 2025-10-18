@@ -1,5 +1,6 @@
 ﻿#include "ProcessScanner.hpp"
 #include <algorithm>
+#include <stdexcept>
 
 namespace
 {
@@ -20,50 +21,6 @@ void AssertProcessEnumSuccess(BOOL result, const char* operation)
 	{
 		throw std::runtime_error(std::string("Failed to ") + operation + " process from snapshot");
 	}
-}
-} // namespace
-
-std::vector<ProcessInfo> ProcessScanner::GetProcesses()
-{
-	return ScanProcesses();
-}
-
-void SortByMemory(std::vector<ProcessInfo>& processes)
-{
-	std::sort(processes.begin(), processes.end(), [](const ProcessInfo& a, const ProcessInfo& b) {
-		SIZE_T aTotal = a.privateBytes + a.sharedMemory;
-		SIZE_T bTotal = b.privateBytes + b.sharedMemory;
-		return aTotal > bTotal;
-	});
-}
-
-std::vector<ProcessInfo> ScanProcesses()
-{
-	std::vector<ProcessInfo> processes;
-
-	ScopedHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
-	AssertIsValidHandleValue(snapshot);
-
-	PROCESSENTRY32 pe32;
-	pe32.dwSize = sizeof(PROCESSENTRY32);
-
-	AssertProcessEnumSuccess(Process32First(snapshot, &pe32), "get first");
-
-	do
-	{
-		ProcessInfo info;
-		info.pid = pe32.th32ProcessID;
-		info.processName = pe32.szExeFile;
-		info.threadCount = pe32.cntThreads;
-		info.userName = GetUserName(info.pid);
-		GetMemoryInfo(info.pid, info.privateBytes, info.sharedMemory);
-		info.commandLine = GetCommandLine(info.pid);
-
-		processes.emplace_back(std::move(info));
-
-	} while (Process32Next(snapshot, &pe32));
-
-	return processes;
 }
 
 std::string GetUserName(uint32_t pid)
@@ -139,12 +96,6 @@ bool GetMemoryInfo(uint32_t pid, uint64_t& privateBytes, uint64_t& sharedMemory)
 	return false;
 }
 
-bool GetCpuUsage(uint32_t pid, double& usage)
-{
-	// TODO: доделать
-	return false;
-}
-
 std::string GetCommandLine(uint32_t pid)
 {
 	ScopedHandle processHandle(OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid));
@@ -161,4 +112,47 @@ std::string GetCommandLine(uint32_t pid)
 	}
 
 	return "(unknown)";
+}
+
+
+std::vector<ProcessInfo> ScanProcesses()
+{
+	std::vector<ProcessInfo> processes;
+
+	ScopedHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+	AssertIsValidHandleValue(snapshot);
+
+	PROCESSENTRY32 pe32;
+	pe32.dwSize = sizeof(PROCESSENTRY32);
+
+	AssertProcessEnumSuccess(Process32First(snapshot, &pe32), "get first");
+
+	do
+	{
+		ProcessInfo info;
+		info.pid = pe32.th32ProcessID;
+		info.processName = pe32.szExeFile;
+		info.threadCount = pe32.cntThreads;
+		info.userName = GetUserName(info.pid);
+		GetMemoryInfo(info.pid, info.privateBytes, info.sharedMemory);
+		info.commandLine = GetCommandLine(info.pid);
+
+		processes.emplace_back(std::move(info));
+
+	} while (Process32Next(snapshot, &pe32));
+
+	return processes;
+}
+} // namespace
+
+std::vector<ProcessInfo> ProcessScanner::GetProcesses()
+{
+	return ScanProcesses();
+}
+
+void ProcessScanner::SortByMemory(std::vector<ProcessInfo>& processes)
+{
+	std::ranges::sort(processes, [](const ProcessInfo& a, const ProcessInfo& b) {
+		return a.privateBytes + a.sharedMemory > b.privateBytes + b.sharedMemory;
+	});
 }

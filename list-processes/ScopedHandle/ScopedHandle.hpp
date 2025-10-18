@@ -1,7 +1,6 @@
 ﻿#ifndef SCOPEDHANDLE_HPP
 #define SCOPEDHANDLE_HPP
 
-#include <utility>
 #include <windows.h>
 
 class ScopedHandle
