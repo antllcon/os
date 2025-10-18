@@ -3,7 +3,6 @@
 #include "ImageProcessor.h"
 #include "src/ResultFilter/ResultFilter.h"
 
-#include <algorithm>
 #include <boost/asio/post.hpp>
 #include <boost/asio/thread_pool.hpp>
 #include <filesystem>
@@ -125,7 +124,7 @@ int main(int argc, char* argv[])
 					auto mse = ImageProcessor::CalculateMse(targetPixels, candidatePixels);
 
 					{
-						std::lock_guard<std::mutex> lock(resultsMutex);
+						std::lock_guard lock(resultsMutex);
 						allResults.push_back({filePath, mse});
 					}
 				}
