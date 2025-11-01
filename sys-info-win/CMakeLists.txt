@@ -1,1 +1,0 @@
-add_executable(InfoWin main.cpp)
