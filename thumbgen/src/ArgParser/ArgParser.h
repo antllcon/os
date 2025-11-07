@@ -5,27 +5,26 @@
 
 class ArgParser
 {
-	constexpr static unsigned int MIN_THREADS = 1;
-	constexpr static size_t MIN_SIM_IMAGES = 3;
-	constexpr static double QUALITIY_BOUNDARY = 0.8;
+	constexpr static size_t MIN_THREADS = 1;
 
 public:
 	ArgParser(int argc, char* argv[]);
 	void Parse();
 
-	const std::string& GetTargetImagePath() const;
 	const std::string& GetInputDir() const;
+	const std::string& GetOutputDir() const;
 	size_t GetNumThreads() const;
-	size_t GetTopK() const;
-	double GetThreshold() const;
+	int GetThumbWidth() const;
+	int GetThumbHeight() const;
 
 private:
 	const std::string& GetValueFor(const std::string& argName, size_t& index);
+	void ParseSize(const std::string& sizeStr);
 
 	std::vector<std::string> m_args;
-	std::string m_targetImagePath;
 	std::string m_inputDir;
+	std::string m_outputDir;
 	size_t m_numThreads = MIN_THREADS;
-	size_t m_topK = MIN_SIM_IMAGES;
-	double m_threshold = QUALITIY_BOUNDARY;
+	int m_thumbWidth = 0;
+	int m_thumbHeight = 0;
 };
