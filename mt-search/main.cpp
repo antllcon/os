@@ -1,26 +1,21 @@
+// #include <boost/asio/post.hpp>
+// #include <boost/asio/thread_pool.hpp>
+#include "Application.h"
 #include "ScopeTimer.h"
-#include <boost/asio/post.hpp>
-#include <boost/asio/thread_pool.hpp>
-#include <filesystem>
+
 #include <iostream>
 
 namespace fs = std::filesystem;
 
 int main()
 {
+	std::cout << "Current directory: " << std::filesystem::current_path() << std::endl;
+
 	try
 	{
 		ScopeTimer time;
-
-		boost::asio::thread_pool pool(/* кол-во потоков */);
-		for (const auto& /*1 данное */ : /* данные которые будем делить */)
-		{
-			boost::asio::post(pool, [&, /* аргументы */] {
-				// Метод
-			});
-		}
-
-		pool.join();
+		Application application;
+		application.Run();
 	}
 	catch (const std::exception& e)
 	{

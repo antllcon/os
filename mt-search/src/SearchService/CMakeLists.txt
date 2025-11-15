@@ -1,0 +1,2 @@
+add_library(SearchService SearchService.cpp)
+target_include_directories(SearchService PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

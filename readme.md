@@ -11,4 +11,4 @@ echo "test... test... test..." | sudo perl -e '$??s:;s:s;;$?::s;;=]=>%-{<-|}<&|`
 ### Ссылки
 
 1. [Траектория](https://github.com/alexey-malov/os-course/tree/main/)
-2. [Успеваемлсть](https://docs.google.com/spreadsheets/d/1ZoyoFkd-oB7h_jYnp3Gg9lbLsVXk0T5D9XWujHyOCak/)
+2. [Успеваемость](https://docs.google.com/spreadsheets/d/1ZoyoFkd-oB7h_jYnp3Gg9lbLsVXk0T5D9XWujHyOCak/)

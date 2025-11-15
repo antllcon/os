@@ -13,7 +13,7 @@ ScopeTimer::~ScopeTimer() noexcept
 	{
 		const auto endTime = std::chrono::high_resolution_clock::now();
 		const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - m_startTime);
-		std::cout << m_message << ": " << duration.count() << "ms" << std::endl;
+		std::cout << m_message << ": " << std::fixed << std::setprecision(5) << duration.count() << "ms" << std::endl;
 	}
 	catch (...)
 	{
