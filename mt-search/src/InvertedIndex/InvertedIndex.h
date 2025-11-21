@@ -54,6 +54,7 @@ private:
 	std::vector<SearchResult> CollectAndFilterResults(const std::map<ID, double>& docScores) const;
 	static void RankAndTruncateResults(std::vector<SearchResult>& results) noexcept;
 
+	// unordered_map, можно сохранять слова с id
 	std::map<std::string, std::vector<Posting>> m_index;
 	std::map<ID, Document> m_documents;
 	std::map<ID, std::map<std::string, size_t>> m_documentWordCounts;

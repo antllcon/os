@@ -22,6 +22,7 @@ void InvertedIndex::AddDocument(const Path& path, const std::map<std::string, si
 	AddDocumentToIndex(newId, wordCounts);
 }
 
+// Добавить безопасное добавление
 void InvertedIndex::StoreDocument(ID newId, const Path& path, size_t totalWords, const std::map<std::string, size_t>& wordCounts)
 {
 	m_documents[newId] = Document{newId, path, totalWords};
@@ -109,8 +110,8 @@ std::vector<SearchResult> InvertedIndex::Search(const std::vector<std::string>& 
 
 std::map<ID, double> InvertedIndex::CalculateRelevanceScores(const std::vector<std::string>& queryTokens, size_t totalDocumentCount) const
 {
+	// использовать вектор
 	std::map<ID, double> docScores;
-
 	for (const auto& term : queryTokens)
 	{
 		const auto termIt = m_index.find(term);

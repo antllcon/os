@@ -25,7 +25,6 @@ public:
 	std::future<void> AddDirectoryAsync(const Path& path, bool recursive) const;
 	std::future<void> RemoveFileAsync(const Path& path) const;
 	std::future<void> RemoveDirectoryAsync(const Path& path, bool recursive) const;
-
 	void FindBatchAsync(const Path& path, const BatchCallback& onResult) const;
 
 private:
