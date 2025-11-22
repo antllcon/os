@@ -50,7 +50,6 @@ private:
 
 				if (accessType == Access::Write)
 				{
-					// Dummy call check
 					m_physicalMemory.Write32(physicalAddress & ~0x3, 0);
 
 					switch (sizeof(T))

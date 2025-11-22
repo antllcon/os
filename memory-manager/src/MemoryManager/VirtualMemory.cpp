@@ -69,7 +69,6 @@ void VirtualMemory::Write64(uint32_t address, uint64_t value, Privilege privileg
 	const uint32_t tableIndex = (address >> 12) & 0x3FF;
 	const uint32_t offset = address & 0xFFF;
 
-	// Page Directory, Адрес PDE = Base + Index * 4
 	uint32_t pageDirectory = m_pageDirectoryBase + (directoryIndex * sizeof(uint32_t));
 
 	PTE pde;
@@ -84,22 +83,19 @@ void VirtualMemory::Write64(uint32_t address, uint64_t value, Privilege privileg
 
 	CheckProtections(pde, privilege, accessType);
 
-	// Обновляем Accessed бит у PDE
 	if (!pde.IsAccessed())
 	{
 		pde.SetAccessed(true);
 		m_physicalMemory.Write32(pageDirectory, pde.raw);
 	}
 
-	// Page Table
-	// Адрес таблицы страниц берется из PDE
 	uint32_t pageTableBase = pde.GetFrame() * 4096;
-	uint32_t pteAddr = pageTableBase + (tableIndex * sizeof(uint32_t));
+	uint32_t pageTableAddress = pageTableBase + (tableIndex * sizeof(uint32_t));
 
 	PTE pte;
 	try
 	{
-		pte.raw = m_physicalMemory.Read32(pteAddr);
+		pte.raw = m_physicalMemory.Read32(pageTableAddress);
 	}
 	catch (...)
 	{
@@ -108,7 +104,6 @@ void VirtualMemory::Write64(uint32_t address, uint64_t value, Privilege privileg
 
 	CheckProtections(pte, privilege, accessType);
 
-	// Обновляем Accessed и Dirty у PTE
 	bool needUpdate = false;
 	if (!pte.IsAccessed())
 	{
@@ -123,7 +118,7 @@ void VirtualMemory::Write64(uint32_t address, uint64_t value, Privilege privileg
 
 	if (needUpdate)
 	{
-		m_physicalMemory.Write32(pteAddr, pte.raw);
+		m_physicalMemory.Write32(pageTableAddress, pte.raw);
 	}
 
 	return (pte.GetFrame() * 4096) + offset;

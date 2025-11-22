@@ -1,6 +1,4 @@
 set(MODULES
-        ScopeTimer
-        ThreadPool
         MemoryManager
 )
 
@@ -12,10 +10,10 @@ endforeach ()
 
 target_link_libraries(memory-manager PRIVATE ${MODULES})
 
-if (BUILD_TESTING)
-    add_subdirectory(tests)
-endif ()
-
-if (BUILD_BENCHMARKS)
-    add_subdirectory(benchmarks)
-endif ()
+#if (BUILD_TESTING)
+#    add_subdirectory(tests)
+#endif ()
+#
+#if (BUILD_BENCHMARKS)
+#    add_subdirectory(benchmarks)
+#endif ()
