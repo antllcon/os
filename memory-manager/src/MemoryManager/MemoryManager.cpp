@@ -151,10 +151,10 @@ uintptr_t MemoryManager::AlignUp(uintptr_t address, size_t align)
 
 void* MemoryManager::GetDataPtr(BlockHeader* header)
 {
-	return reinterpret_cast<char*>(header) + sizeof(BlockHeader);
+	return header + 1;
 }
 
 MemoryManager::BlockHeader* MemoryManager::GetHeader(void* dataPtr)
 {
-	return reinterpret_cast<BlockHeader*>(static_cast<char*>(dataPtr) - sizeof(BlockHeader));
+	return static_cast<BlockHeader*>(dataPtr) - 1;
 }

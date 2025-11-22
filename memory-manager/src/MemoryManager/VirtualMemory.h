@@ -6,6 +6,7 @@
 #include "PhysicalMemory.h"
 #include <cstdint>
 
+
 struct PageFaultException
 {
 	PageFaultReason reason;
@@ -42,8 +43,10 @@ private:
 			return AccessMemory<T>(address, privilege, accessType, value);
 		}
 
+		// Ограничить количество обращений к памяти
 		while (true)
 		{
+			// Не использовать исключения для передачи управления
 			try
 			{
 				uint32_t physicalAddress = TranslateAddress(address, privilege, accessType);
@@ -52,6 +55,7 @@ private:
 				{
 					m_physicalMemory.Write32(physicalAddress & ~0x3, 0);
 
+					// Сделать так, чтобы проверка выполнялась один раз
 					switch (sizeof(T))
 					{
 					case 1:
@@ -71,6 +75,7 @@ private:
 					return T{};
 				}
 
+				// Добавить касты
 				switch (sizeof(T))
 				{
 				case 1:
@@ -94,7 +99,7 @@ private:
 	}
 
 	[[nodiscard]] uint32_t TranslateAddress(uint32_t address, Privilege privilege, Access accessType) const;
-	static void CheckProtections(const PTE& entry, Privilege privilege, Access accessType);
+	static void CheckProtections(PTE entry, Privilege privilege, Access accessType);
 	bool HandleFault(uint32_t vpn, Access access, PageFaultReason reason) const;
 
 	PhysicalMemory& m_physicalMemory;

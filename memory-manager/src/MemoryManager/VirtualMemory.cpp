@@ -2,6 +2,21 @@
 
 #include "PageTableEntry.h"
 
+namespace
+{
+const uint32_t BITS_PER_PAGE = 12;
+const uint32_t PAGE_SIZE = 0x1000;
+
+const uint32_t DIRECTORY_INDEX_SHIFT = 22;
+const uint32_t TABLE_INDEX_SHIFT = 12;
+
+const uint32_t DIRECTORY_INDEX_MASK = 0x3FF;
+const uint32_t TABLE_INDEX_MASK = 0x3FF;
+const uint32_t OFFSET_MASK = 0xFFF;
+
+const uint32_t PAGE_4K = 4096;
+}
+
 VirtualMemory::VirtualMemory(PhysicalMemory& physicalMemory, IOSHandler& handler)
 	: m_physicalMemory(physicalMemory)
 	, m_handler(handler)
@@ -63,17 +78,19 @@ void VirtualMemory::Write64(uint32_t address, uint64_t value, Privilege privileg
 	AccessMemory<uint64_t>(address, privilege, Access::Write, value);
 }
 
+// Разделить на отдельные блоки, метод большой!
 [[nodiscard]] uint32_t VirtualMemory::TranslateAddress(uint32_t address, Privilege privilege, Access accessType) const
 {
-	const uint32_t directoryIndex = (address >> 22) & 0x3FF;
-	const uint32_t tableIndex = (address >> 12) & 0x3FF;
-	const uint32_t offset = address & 0xFFF;
+	const uint32_t directoryIndex = (address >> DIRECTORY_INDEX_SHIFT) & DIRECTORY_INDEX_MASK;
+	const uint32_t tableIndex = (address >> TABLE_INDEX_SHIFT) & TABLE_INDEX_MASK;
+	const uint32_t offset = address & OFFSET_MASK;
 
 	uint32_t pageDirectory = m_pageDirectoryBase + (directoryIndex * sizeof(uint32_t));
 
 	PTE pde;
 	try
 	{
+		// Можно обойтись проверкой, не нужно использовать try catch()
 		pde.raw = m_physicalMemory.Read32(pageDirectory);
 	}
 	catch (...)
@@ -89,7 +106,7 @@ void VirtualMemory::Write64(uint32_t address, uint64_t value, Privilege privileg
 		m_physicalMemory.Write32(pageDirectory, pde.raw);
 	}
 
-	uint32_t pageTableBase = pde.GetFrame() * 4096;
+	uint32_t pageTableBase = pde.GetFrame() * PAGE_4K;
 	uint32_t pageTableAddress = pageTableBase + (tableIndex * sizeof(uint32_t));
 
 	PTE pte;
@@ -104,27 +121,28 @@ void VirtualMemory::Write64(uint32_t address, uint64_t value, Privilege privileg
 
 	CheckProtections(pte, privilege, accessType);
 
-	bool needUpdate = false;
+	bool needUpdatePte = false;
 	if (!pte.IsAccessed())
 	{
 		pte.SetAccessed(true);
-		needUpdate = true;
+		needUpdatePte = true;
 	}
 	if (accessType == Access::Write && !pte.IsDirty())
 	{
 		pte.SetDirty(true);
-		needUpdate = true;
+		needUpdatePte = true;
 	}
 
-	if (needUpdate)
+	if (needUpdatePte)
 	{
 		m_physicalMemory.Write32(pageTableAddress, pte.raw);
 	}
 
-	return (pte.GetFrame() * 4096) + offset;
+	return (pte.GetFrame() * PAGE_4K) + offset;
 }
 
-void VirtualMemory::CheckProtections(const PTE& entry, Privilege privilege, Access accessType)
+// Убрать исключения
+void VirtualMemory::CheckProtections(PTE entry, Privilege privilege, Access accessType)
 {
 	if (!entry.IsPresent())
 	{
