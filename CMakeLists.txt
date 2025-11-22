@@ -15,4 +15,4 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest benchmark)
 enable_testing()
 
-add_subdirectory(mt-search)
+add_subdirectory(memory-manager)

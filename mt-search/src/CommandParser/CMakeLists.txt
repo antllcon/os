@@ -1,2 +1,0 @@
-add_library(CommandParser CommandParser.cpp)
-target_include_directories(CommandParser PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

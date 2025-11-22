@@ -1,0 +1,2 @@
+add_library(MemoryManager PhysicalMemory.cpp VirtualMemory.cpp)
+target_include_directories(MemoryManager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
