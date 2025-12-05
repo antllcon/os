@@ -1,12 +1,26 @@
 #pragma once
-
-#include "../BTree/BTree.h"
+#include "BTree/BTree.h"
 #include "Menu.h"
+#include <iostream>
+
+namespace IoUtils
+{
+template <typename T>
+T Read(const std::string& errorMessage)
+{
+	T value;
+	if (!(std::cin >> value))
+	{
+		throw std::runtime_error(errorMessage);
+	}
+	return value;
+}
+} // namespace IoUtils
 
 class PutCommand : public ICommand
 {
 public:
-	PutCommand(BTree& tree);
+	explicit PutCommand(BTree& tree);
 	void Execute() override;
 
 private:
@@ -16,7 +30,7 @@ private:
 class GetCommand : public ICommand
 {
 public:
-	GetCommand(BTree& tree);
+	explicit GetCommand(BTree& tree);
 	void Execute() override;
 
 private:
@@ -26,7 +40,7 @@ private:
 class DelCommand : public ICommand
 {
 public:
-	DelCommand(BTree& tree);
+	explicit DelCommand(BTree& tree);
 	void Execute() override;
 
 private:
@@ -36,7 +50,17 @@ private:
 class StatsCommand : public ICommand
 {
 public:
-	StatsCommand(const BTree& tree);
+	explicit StatsCommand(const BTree& tree);
+	void Execute() override;
+
+private:
+	const BTree& m_tree;
+};
+
+class TreeCommand : public ICommand
+{
+public:
+	explicit TreeCommand(const BTree& tree);
 	void Execute() override;
 
 private:
@@ -46,7 +70,7 @@ private:
 class HelpCommand : public ICommand
 {
 public:
-	HelpCommand(const Menu& menu);
+	explicit HelpCommand(const Menu& menu);
 	void Execute() override;
 
 private:
@@ -56,7 +80,7 @@ private:
 class ExitCommand : public ICommand
 {
 public:
-	ExitCommand(Menu& menu);
+	explicit ExitCommand(Menu& menu);
 	void Execute() override;
 
 private:

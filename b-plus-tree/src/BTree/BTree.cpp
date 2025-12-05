@@ -27,6 +27,11 @@ std::optional<std::string> BTree::Get(uint64_t key)
 	}
 
 	uint64_t leafId = FindLeaf(key);
+	if (leafId == NULL_PAGE)
+	{
+		return std::nullopt;
+	}
+
 	LeafNode leaf(m_manager.GetPage(leafId));
 
 	uint16_t count = leaf.GetCount();
@@ -50,32 +55,30 @@ std::optional<std::string> BTree::Get(uint64_t key)
 
 void BTree::Put(uint64_t key, const std::string& value)
 {
-	TreeHeader* header = m_manager.GetHeader();
-
-	if (header->rootPage == NULL_PAGE)
+	if (m_manager.GetHeader()->rootPage == NULL_PAGE)
 	{
 		CreateFirstRoot(key, value);
 		return;
 	}
 
 	uint64_t leafId = FindLeaf(key);
-	LeafNode leaf(m_manager.GetPage<NodeHeader>(leafId));
+	{
+		LeafNode leaf(m_manager.GetPage<NodeHeader>(leafId));
+		if (TryUpdateInLeaf(leaf, key, value))
+		{
+			return;
+		}
 
-	if (TryUpdateInLeaf(leaf, key, value))
-	{
-		return;
+		if (leaf.GetCount() < MAX_LEAF_KEYS)
+		{
+			InsertIntoLeafNoSplit(leaf, key, value);
+			m_manager.GetHeader()->keysCount++;
+			return;
+		}
 	}
 
-	if (leaf.GetCount() < MAX_LEAF_KEYS)
-	{
-		InsertIntoLeafNoSplit(leaf, key, value);
-		header->keysCount++;
-	}
-	else
-	{
-		SplitLeafAndInsert(leafId, key, value);
-		header->keysCount++;
-	}
+	SplitLeafAndInsert(leafId, key, value);
+	m_manager.GetHeader()->keysCount++;
 }
 
 void BTree::PrintStats() const
@@ -88,6 +91,67 @@ void BTree::PrintStats() const
 	std::cout << "Keys:      " << th->keysCount << std::endl;
 	std::cout << "Root Page: " << th->rootPage << std::endl;
 	std::cout << "Next PID:  " << th->nextPid << std::endl;
+}
+
+void BTree::PrintStructure() const
+{
+	TreeHeader* header = m_manager.GetHeader();
+	if (header->rootPage == NULL_PAGE)
+	{
+		std::cout << "Empty Tree" << std::endl;
+		return;
+	}
+
+	std::cout << "ROOT [" << header->rootPage << "] (H=" << header->height << ")" << std::endl;
+	PrintNodeRecursive(header->rootPage, "", true);
+}
+
+void BTree::PrintNodeRecursive(uint64_t nodeId, const std::string& prefix, bool isLast) const
+{
+	const NodeHeader* header = m_manager.GetPage<NodeHeader>(nodeId);
+	BaseNode node(const_cast<NodeHeader*>(header));
+
+	std::cout << prefix;
+	std::cout << (isLast ? "L-" : "|-");
+
+	if (node.IsInternal())
+	{
+		InternalNode inode(const_cast<NodeHeader*>(header));
+		std::cout << "[INT " << nodeId << "] P:" << header->parent << " Keys: " << inode.GetCount() << std::endl;
+
+		std::string childPrefix = prefix + (isLast ? "   " : "|  ");
+
+		uint16_t count = inode.GetCount();
+		for (uint16_t i = 0; i <= count; ++i)
+		{
+			uint64_t childId = inode.GetChild(i);
+			PrintNodeRecursive(childId, childPrefix, i == count);
+		}
+	}
+	else
+	{
+		LeafNode leaf(const_cast<NodeHeader*>(header));
+		std::cout << "[LEAF " << nodeId << "] P:" << header->parent
+				  << " Next:" << leaf.GetNext() << " Prev:" << leaf.GetPrev() << std::endl;
+
+		std::string childPrefix = prefix + (isLast ? "   " : "|  ");
+		uint16_t count = leaf.GetCount();
+
+		for (uint16_t i = 0; i < count; ++i)
+		{
+			const auto& rec = leaf.GetRecord(i);
+
+			std::string val(rec.value, rec.len);
+			if (val.length() > MAX_PRINT_VAL_LEN)
+			{
+				val = val.substr(0, MAX_PRINT_VAL_LEN) + "..";
+			}
+
+			std::cout << childPrefix;
+			std::cout << (i == count - 1 ? "L-" : "|-");
+			std::cout << "[" << rec.key << "] " << val << std::endl;
+		}
+	}
 }
 
 void BTree::CreateFirstRoot(uint64_t key, const std::string& value)
@@ -255,7 +319,7 @@ void BTree::LinkLeafNodes(uint64_t oldLeafId, uint64_t newLeafId)
 	newLeaf.SetPrev(oldLeafId);
 	newLeaf.SetNext(nextLeafId);
 
-	if (nextLeafId != 0)
+	if (nextLeafId != NULL_PAGE)
 	{
 		LeafNode nextNode(m_manager.GetPage<NodeHeader>(nextLeafId));
 		nextNode.SetPrev(newLeafId);
@@ -264,8 +328,11 @@ void BTree::LinkLeafNodes(uint64_t oldLeafId, uint64_t newLeafId)
 
 void BTree::InsertParent(uint64_t leftChildId, uint64_t key, uint64_t rightChildId)
 {
-	BaseNode leftNode(m_manager.GetPage<NodeHeader>(leftChildId));
-	uint64_t parentId = leftNode.GetParent();
+	uint64_t parentId;
+	{
+		BaseNode leftNode(m_manager.GetPage<NodeHeader>(leftChildId));
+		parentId = leftNode.GetParent();
+	}
 
 	if (parentId == NULL_PAGE)
 	{
@@ -273,45 +340,52 @@ void BTree::InsertParent(uint64_t leftChildId, uint64_t key, uint64_t rightChild
 		return;
 	}
 
-	InternalNode parent(m_manager.GetPage<NodeHeader>(parentId));
-
-	if (parent.GetCount() < MAX_INTERNAL_KEYS)
+	bool needSplit = false;
 	{
-		uint16_t pos = 0;
-		uint16_t count = parent.GetCount();
-		bool found = false;
-
-		if (parent.GetChild(0) == leftChildId)
+		InternalNode parent(m_manager.GetPage<NodeHeader>(parentId));
+		if (parent.GetCount() < MAX_INTERNAL_KEYS)
 		{
-			pos = 0;
-			found = true;
+			uint16_t pos = 0;
+			uint16_t count = parent.GetCount();
+			bool found = false;
+
+			if (parent.GetChild(0) == leftChildId)
+			{
+				pos = 0;
+				found = true;
+			}
+			else
+			{
+				for (uint16_t i = 1; i <= count; ++i)
+				{
+					if (parent.GetChild(i) == leftChildId)
+					{
+						pos = i;
+						found = true;
+						break;
+					}
+				}
+			}
+
+			if (!found)
+			{
+				while (pos < count && parent.GetKey(pos) < key)
+				{
+					pos++;
+				}
+			}
+
+			parent.InsertAt(pos, key, rightChildId);
+			BaseNode child(m_manager.GetPage<NodeHeader>(rightChildId));
+			child.SetParent(parentId);
 		}
 		else
 		{
-			for (uint16_t i = 1; i <= count; ++i)
-			{
-				if (parent.GetChild(i) == leftChildId)
-				{
-					pos = i;
-					found = true;
-					break;
-				}
-			}
+			needSplit = true;
 		}
-
-		if (!found)
-		{
-			while (pos < count && parent.GetKey(pos) < key)
-			{
-				pos++;
-			}
-		}
-
-		parent.InsertAt(pos, key, rightChildId);
-
-		m_manager.GetPage<BaseNode>(rightChildId)->SetParent(parentId);
 	}
-	else
+
+	if (needSplit)
 	{
 		SplitInternalAndInsert(parentId, key, rightChildId);
 	}
@@ -335,8 +409,11 @@ void BTree::CreateNewRootFromSplit(uint64_t leftChildId, uint64_t key, uint64_t 
 	root.SetChild(0, leftChildId);
 	root.InsertAt(0, key, rightChildId);
 
-	m_manager.GetPage<BaseNode>(leftChildId)->SetParent(newRootId);
-	m_manager.GetPage<BaseNode>(rightChildId)->SetParent(newRootId);
+	BaseNode left(m_manager.GetPage<NodeHeader>(leftChildId));
+	left.SetParent(newRootId);
+
+	BaseNode right(m_manager.GetPage<NodeHeader>(rightChildId));
+	right.SetParent(newRootId);
 }
 
 void BTree::SplitInternalAndInsert(uint64_t nodeId, uint64_t key, uint64_t rightChildId)
@@ -386,6 +463,7 @@ void BTree::DistributeInternalData(uint64_t oldNodeId, uint64_t newNodeId, const
 {
 	InternalNode oldNode(m_manager.GetPage<NodeHeader>(oldNodeId));
 
+
 	NodeHeader* newHeaderRaw = m_manager.GetPage<NodeHeader>(newNodeId);
 	newHeaderRaw->type = NodeType::Internal;
 	newHeaderRaw->numKeys = 0;
@@ -394,24 +472,23 @@ void BTree::DistributeInternalData(uint64_t oldNodeId, uint64_t newNodeId, const
 
 	oldNode.SetCount(0);
 	oldNode.SetChild(0, data.children[0]);
-
-	m_manager.GetPage<BaseNode>(data.children[0])->SetParent(oldNodeId);
+	BaseNode(m_manager.GetPage<NodeHeader>(data.children[0])).SetParent(oldNodeId);
 
 	for (size_t i = 0; i < midIndex; ++i)
 	{
 		oldNode.InsertAt(static_cast<uint16_t>(i), data.keys[i], data.children[i + 1]);
-		m_manager.GetPage<BaseNode>(data.children[i + 1])->SetParent(oldNodeId);
+		BaseNode(m_manager.GetPage<NodeHeader>(data.children[i + 1])).SetParent(oldNodeId);
 	}
 
 	newNode.SetChild(0, data.children[midIndex + 1]);
-	m_manager.GetPage<BaseNode>(data.children[midIndex + 1])->SetParent(newNodeId);
+	BaseNode(m_manager.GetPage<NodeHeader>(data.children[midIndex + 1])).SetParent(newNodeId);
 
 	size_t totalKeys = data.keys.size();
 	for (size_t i = midIndex + 1; i < totalKeys; ++i)
 	{
 		uint16_t newIndex = static_cast<uint16_t>(i - (midIndex + 1));
 		newNode.InsertAt(newIndex, data.keys[i], data.children[i + 1]);
-		m_manager.GetPage<BaseNode>(data.children[i + 1])->SetParent(newNodeId);
+		BaseNode(m_manager.GetPage<NodeHeader>(data.children[i + 1])).SetParent(newNodeId);
 	}
 }
 
@@ -554,9 +631,9 @@ void BTree::MergeLeaves(uint64_t leftId, uint64_t rightId, uint64_t parentId, ui
 	}
 
 	left.SetNext(right.GetNext());
-	if (right.GetNext() != 0)
+	if (right.GetNext() != NULL_PAGE)
 	{
-		m_manager.GetPage<LeafNode>(right.GetNext())->SetPrev(leftId);
+		LeafNode(m_manager.GetPage<NodeHeader>(right.GetNext())).SetPrev(leftId);
 	}
 
 	m_manager.FreePage(rightId);
@@ -636,7 +713,7 @@ void BTree::BorrowFromLeftInternal(uint64_t nodeId, uint64_t leftId, uint64_t pa
 	uint64_t oldP0 = cur.GetChild(0);
 	cur.InsertAt(0, keyFromParent, oldP0);
 	cur.SetChild(0, childFromLeft);
-	m_manager.GetPage<BaseNode>(childFromLeft)->SetParent(nodeId);
+	BaseNode(m_manager.GetPage<NodeHeader>(childFromLeft)).SetParent(nodeId);
 
 	parent.SetKey(parentKeyIdx, keyFromLeft);
 }
@@ -654,7 +731,7 @@ void BTree::BorrowFromRightInternal(uint64_t nodeId, uint64_t rightId, uint64_t 
 	uint64_t keyFromRight = right.GetKey(0);
 
 	cur.InsertAt(cur.GetCount(), keyFromParent, childFromRight);
-	m_manager.GetPage<BaseNode>(childFromRight)->SetParent(nodeId);
+	BaseNode(m_manager.GetPage<NodeHeader>(childFromRight)).SetParent(nodeId);
 
 	uint64_t p1Right = right.GetChild(1);
 
@@ -674,13 +751,13 @@ void BTree::MergeInternalNodes(uint64_t leftId, uint64_t rightId, uint64_t paren
 
 	uint64_t rightP0 = right.GetChild(0);
 	left.InsertAt(left.GetCount(), keyFromParent, rightP0);
-	m_manager.GetPage<BaseNode>(rightP0)->SetParent(leftId);
+	BaseNode(m_manager.GetPage<NodeHeader>(rightP0)).SetParent(leftId);
 
 	uint16_t rightCount = right.GetCount();
 	for (uint16_t i = 0; i < rightCount; ++i)
 	{
 		left.InsertAt(left.GetCount(), right.GetKey(i), right.GetChild(i + 1));
-		m_manager.GetPage<BaseNode>(right.GetChild(i + 1))->SetParent(leftId);
+		BaseNode(m_manager.GetPage<NodeHeader>(right.GetChild(i + 1))).SetParent(leftId);
 	}
 
 	m_manager.FreePage(rightId);
@@ -703,7 +780,7 @@ void BTree::AdjustRoot()
 		header->rootPage = newRootId;
 		header->height--;
 
-		m_manager.GetPage<BaseNode>(newRootId)->SetParent(NULL_PAGE);
+		BaseNode(m_manager.GetPage<NodeHeader>(newRootId)).SetParent(NULL_PAGE);
 		m_manager.FreePage(rootId);
 		header->nodesCount--;
 	}

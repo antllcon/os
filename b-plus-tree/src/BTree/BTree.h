@@ -9,6 +9,8 @@ class BaseNode;
 class LeafNode;
 class BTree
 {
+	const size_t MAX_PRINT_VAL_LEN = 4;
+
 public:
 	explicit BTree(const std::filesystem::path& path);
 
@@ -20,8 +22,11 @@ public:
 	bool Remove(uint64_t key);
 
 	void PrintStats() const;
+	void PrintStructure() const;
 
 private:
+	void PrintNodeRecursive(uint64_t nodeId, const std::string& prefix, bool isLast) const;
+
 	void CreateFirstRoot(uint64_t key, const std::string& value);
 	uint64_t FindLeaf(uint64_t key) const;
 	void InsertParent(uint64_t leftChild, uint64_t key, uint64_t rightChild);

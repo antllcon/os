@@ -8,13 +8,11 @@ PutCommand::PutCommand(BTree& tree)
 
 void PutCommand::Execute()
 {
-	uint64_t key;
-	std::string value;
-	if (!(std::cin >> key >> value))
-	{
-		throw std::runtime_error("Invalid arguments. Use: PUT <key> <value>");
-	}
+	auto key = IoUtils::Read<uint64_t>("Invalid key format. Expected <uint64>");
+	auto value = IoUtils::Read<std::string>("Invalid value format. Expected <string>");
+
 	m_tree.Put(key, value);
+	std::cout << "OK" << std::endl;
 }
 
 GetCommand::GetCommand(BTree& tree)
@@ -24,11 +22,8 @@ GetCommand::GetCommand(BTree& tree)
 
 void GetCommand::Execute()
 {
-	uint64_t key;
-	if (!(std::cin >> key))
-	{
-		throw std::runtime_error("Invalid arguments. Use: GET <key>");
-	}
+	auto key = IoUtils::Read<uint64_t>("Invalid key format. Expected <uint64>");
+
 	auto result = m_tree.Get(key);
 	if (result.has_value())
 	{
@@ -47,23 +42,36 @@ DelCommand::DelCommand(BTree& tree)
 
 void DelCommand::Execute()
 {
-	uint64_t key;
-	if (!(std::cin >> key))
+	auto key = IoUtils::Read<uint64_t>("Invalid key format. Expected <uint64>");
+
+	if (m_tree.Remove(key))
 	{
-		throw std::runtime_error("Invalid arguments. Use: DEL <key>");
+		std::cout << "Deleted" << std::endl;
 	}
-	m_tree.Remove(key);
+	else
+	{
+		std::cout << "Key not found" << std::endl;
+	}
 }
 
 StatsCommand::StatsCommand(const BTree& tree)
 	: m_tree(tree)
 {
-	m_tree.PrintStats();
 }
 
 void StatsCommand::Execute()
 {
 	m_tree.PrintStats();
+}
+
+TreeCommand::TreeCommand(const BTree& tree)
+	: m_tree(tree)
+{
+}
+
+void TreeCommand::Execute()
+{
+	m_tree.PrintStructure();
 }
 
 HelpCommand::HelpCommand(const Menu& menu)

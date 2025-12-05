@@ -32,11 +32,6 @@ uint64_t PageManager::AllocatePage()
 
 	uint64_t pageId = m_headerCache->freeHead;
 
-	if (pageId == NULL_PAGE)
-	{
-		throw std::runtime_error("Free list is empty");
-	}
-
 	FreePageNode* freeNode = GetPage<FreePageNode>(pageId);
 	m_headerCache->freeHead = freeNode->nextFreePage;
 	std::memset(freeNode, 0, PAGE_SIZE);

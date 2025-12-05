@@ -1,7 +1,6 @@
-#include "ConcreteCommands.h"
-#include "Menu.h"
+#include "Menu/ConcreteCommands.h"
+#include "Menu/Menu.h"
 #include "src/BTree/BTree.h"
-
 #include <filesystem>
 #include <iostream>
 
@@ -27,8 +26,10 @@ int main(int argc, char* argv[])
 		menu.AddItem("PUT", "Insert or update key-value (Usage: PUT <key> <value>)", std::make_unique<PutCommand>(tree));
 		menu.AddItem("DEL", "Delete key (Usage: DEL <key>)", std::make_unique<DelCommand>(tree));
 		menu.AddItem("STATS", "Show tree statistics", std::make_unique<StatsCommand>(tree));
-		menu.AddItem("help", "Show this help", std::make_unique<HelpCommand>(menu));
-		menu.AddItem("exit", "Exit program", std::make_unique<ExitCommand>(menu));
+		menu.AddItem("TREE", "Print tree structure visually", std::make_unique<TreeCommand>(tree));
+		menu.AddItem("LIST", "Alias for tree", std::make_unique<TreeCommand>(tree));
+		menu.AddItem("HELP", "Show this help", std::make_unique<HelpCommand>(menu));
+		menu.AddItem("EXIT", "Exit program", std::make_unique<ExitCommand>(menu));
 		std::cout << "Database opened. Type 'help' for commands" << std::endl;
 
 		menu.Run();

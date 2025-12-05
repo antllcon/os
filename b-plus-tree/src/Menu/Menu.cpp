@@ -1,26 +1,63 @@
 #include "Menu.h"
 #include <algorithm>
 #include <iostream>
+#include <limits>
 
-void Menu::AddItem(const std::string& shortcut, const std::string& description, std::unique_ptr<ICommand>&& command)
+namespace
 {
-	m_items.emplace_back(shortcut, description, std::move(command));
+void RecoverInputStream()
+{
+	if (std::cin.fail())
+	{
+		std::cin.clear();
+		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	}
+}
+
+void SkipLine()
+{
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+} // namespace
+
+void Menu::AddItem(const std::string& shortcut, const std::string& description, std::unique_ptr<ICommand> command)
+{
+	auto it = std::ranges::find_if(m_items, [&](const Item& item) {
+		return item.shortcut == shortcut;
+	});
+
+	if (it != m_items.end())
+	{
+		throw std::invalid_argument("Shortcut '" + shortcut + "' already exists");
+	}
+
+	m_items.emplace_back(Item{shortcut, description, std::move(command)});
 }
 
 void Menu::Run()
 {
-	std::string command;
-	while (std::cout << "> " && std::cin >> command && ExecuteCommand(command))
+	ShowInstructions();
+
+	std::string commandName;
+	while (!m_exit)
 	{
+		std::cout << "> ";
+
+		if (!(std::cin >> commandName))
+		{
+			break;
+		}
+
+		ExecuteCommand(commandName);
 	}
 }
 
 void Menu::ShowInstructions() const
 {
-	std::cout << "Available commands: " << std::endl;
+	std::cout << "Available commands:" << std::endl;
 	for (const auto& item : m_items)
 	{
-		std::cout << "  " << item.shortcut << ": \t" << item.description << std::endl;
+		std::cout << "  " << item.shortcut << "\t: " << item.description << std::endl;
 	}
 }
 
@@ -29,19 +66,10 @@ void Menu::Exit()
 	m_exit = true;
 }
 
-Menu::Item::Item(const std::string& shortcut, const std::string& description, std::unique_ptr<ICommand>&& command)
-	: shortcut(shortcut)
-	, description(description)
-	, command(std::move(command))
+bool Menu::ExecuteCommand(const std::string& commandName)
 {
-}
-
-bool Menu::ExecuteCommand(const std::string& command)
-{
-	m_exit = false;
-
 	auto it = std::ranges::find_if(m_items, [&](const Item& item) {
-		return item.shortcut == command;
+		return item.shortcut == commandName;
 	});
 
 	if (it != m_items.end())
@@ -52,13 +80,16 @@ bool Menu::ExecuteCommand(const std::string& command)
 		}
 		catch (const std::exception& e)
 		{
-			std::cerr << "Error executing command '" << command << "': " << e.what() << std::endl;
+			std::cerr << "Error executing '" << commandName << "': " << e.what() << std::endl;
+
+			RecoverInputStream();
 		}
-	}
-	else
-	{
-		std::cout << "Unknown command. Use 'help'" << std::endl;
+		return true;
 	}
 
-	return !m_exit;
+	std::cout << "Unknown command. Use 'help' to see available commands" << std::endl;
+
+	SkipLine();
+
+	return false;
 }
